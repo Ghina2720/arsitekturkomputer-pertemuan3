@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pertemuan 3 - CPU & Instruction Cycle</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #121212;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        .slide-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        .slide {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 5rem;
+            box-sizing: border-box;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease-in-out;
+        }
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 10;
+        }
+        h1 { font-size: 3.5rem; color: #4DB8FF; text-align: center; margin-bottom: 0.5rem; }
+        h2 { font-size: 2.5rem; color: #4DB8FF; margin-bottom: 1.5rem; text-align: center; }
+        ul { font-size: 1.6rem; line-height: 1.6; max-width: 800px; margin: 0 auto 2rem auto; }
+        li { margin-bottom: 1rem; }
+        .highlight { color: #FFC82C; font-weight: bold; }
+        
+        /* VISUAL ELEMENTS CSS */
+        .visual-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-height: 40vh;
+            margin-top: 1rem;
+        }
+        img.real-img {
+            max-height: 35vh;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 2px solid #333;
+        }
+        .emoji-big {
+            font-size: 8rem;
+            margin: 0 1rem;
+            filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));
+        }
+        
+        /* DIAGRAM BLOK CPU */
+        .diagram-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #4DB8FF;
+        }
+        .cpu-box {
+            background: #2a2a2a;
+            border: 2px dashed #FFC82C;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            width: 350px;
+        }
+        .cpu-title { font-size: 1.5rem; color: #FFC82C; font-weight: bold; margin-bottom: 10px; }
+        .component {
+            padding: 10px; margin: 8px 0;
+            border-radius: 5px; font-weight: bold; color: #000;
+        }
+        .cu { background: #FF9F1C; }
+        .alu { background: #E71D36; color: white;}
+        .reg { background: #2EC4B6; }
+        .bus {
+            font-size: 2rem; color: #4DB8FF; font-weight: bold;
+        }
+        .ram-box {
+            background: #3a3a3a;
+            border: 2px solid #fff;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        /* ANIMATIONS */
+        .spinner {
+            width: 100px; height: 100px;
+            border: 10px solid #333;
+            border-top: 10px solid #4DB8FF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .pulse {
+            font-size: 5rem;
+            color: #E71D36;
+            animation: heartbeat 1s infinite;
+        }
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
+        /* SIMULASI DATA FLOW */
+        .sim-container {
+            display: flex; gap: 40px; align-items: center;
+            background: #222; padding: 20px; border-radius: 15px;
+        }
+        .sim-box {
+            border: 2px solid #777; border-radius: 8px; padding: 15px; text-align: center; min-width: 150px;
+        }
+        .sim-data {
+            background: #FFC82C; color: #000; font-weight: bold; font-size: 2rem;
+            padding: 10px; border-radius: 5px; margin-top: 10px; display: inline-block;
+        }
+
+        .controls { position: fixed; bottom: 2rem; right: 3rem; z-index: 100; }
+        button { background: #4DB8FF; color: #000; border: none; padding: 12px 24px; font-size: 1.2rem; font-weight: bold; border-radius: 6px; cursor: pointer; margin-left: 10px; }
+        button:hover { background: #2A9D8F; color: #fff; }
+        .slide-counter { position: fixed; bottom: 2.5rem; left: 3rem; font-size: 1.2rem; color: #888; z-index: 100; }
+    </style>
+</head>
+<body>
+
+<div class="slide-container" id="slider">
+
+    <!-- SLIDE 1 -->
+    <div class="slide active">
+        <h1>Pertemuan 3: CPU & Instruction Cycle</h1>
+        <ul>
+            <li style="text-align:center; list-style:none;">Arsitektur dan Organisasi Komputer</li>
+            <li style="text-align:center; list-style:none;">Rekayasa Komputer dan Jaringan - Semester 1</li>
+        </ul>
+        <div class="visual-area">
+            <img class="real-img" src="https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?auto=format&fit=crop&w=800&q=80" alt="CPU Chip">
+        </div>
+    </div>
+
+    <!-- SLIDE 2 -->
+    <div class="slide">
+        <h2>Misteri "Double Click"</h2>
+        <ul>
+            <li>Saat kamu <span class="highlight">klik dua kali</span> ikon aplikasi... apa yang terjadi?</li>
+            <li>Hari ini kita "buka kap mesin" dan melihat cara kerjanya.</li>
+        </ul>
+        <div class="visual-area">
+            <div class="emoji-big" style="animation: heartbeat 0.5s infinite;">🖱️</div>
+            <div class="emoji-big">💻</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3 -->
+    <div class="slide">
+        <h2>Peta Perjalanan Hari Ini</h2>
+        <div class="diagram-container" style="border:none; background:transparent;">
+            <div class="cpu-box"><span class="highlight">1. Struktur CPU</span><br>Siapa yang bekerja?</div>
+            <div class="bus">➔</div>
+            <div class="cpu-box"><span class="highlight">2. Siklus Instruksi</span><br>Bagaimana kerjanya?</div>
+            <div class="bus">➔</div>
+            <div class="cpu-box"><span class="highlight">3. Simulasi</span><br>Hitung 2 + 3</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4 -->
+    <div class="slide">
+        <h2>CPU = Dapur Restoran Sibuk</h2>
+        <ul>
+            <li><span class="highlight">CPU</span> = Ruang Dapur (Tempat memasak)</li>
+            <li><span class="highlight">Instruksi</span> = Lembar Pesanan Pelanggan</li>
+            <li><span class="highlight">RAM (Memori)</span> = Kulkas / Gudang Bahan (Tempat simpan bahan)</li>
+        </ul>
+        <div class="visual-area">
+            <img class="real-img" src="https://images.unsplash.com/photo-1578474846511-04ba529f0b88?auto=format&fit=crop&w=800&q=80" alt="Restaurant Kitchen">
+        </div>
+    </div>
+
+    <!-- SLIDE 5 -->
+    <div class="slide">
+        <h2>Apa Isi di Dalam Chip CPU?</h2>
+        <div class="diagram-container">
+            <div class="cpu-box" style="width: 500px;">
+                <div class="cpu-title">3 BOS UTAMA CPU</div>
+                <div class="component cu">1. Control Unit (Manajer) 📋</div>
+                <div class="component alu">2. Arithmetic Logic Unit / ALU (Koki) 💪</div>
+                <div class="component reg">3. Registers (Meja Racik) 🔪</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 6 -->
+    <div class="slide">
+        <h2>1. Control Unit (Sang Manajer)</h2>
+        <ul>
+            <li><span class="highlight">Tugas:</span> Membaca pesanan, menerjemahkan, dan memberi perintah.</li>
+            <li><span class="highlight">Fakta:</span> CU TIDAK melakukan perhitungan matematika! Ia hanya menyuruh.</li>
+        </ul>
+        <div class="visual-area">
+            <div class="emoji-big">🧑‍💼</div>
+            <div class="bus">📢</div>
+            <div class="emoji-big">📜</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 7 -->
+    <div class="slide">
+        <h2>2. A.L.U (Sang Eksekutor)</h2>
+        <ul>
+            <li><span class="highlight">Tugas:</span> Melakukan perhitungan Matematika (+, -, *, /) & Logika (AND, OR).</li>
+            <li>Ini adalah <span class="highlight">otot utama</span> dari CPU. ALU yang bekerja keras mengolah angka.</li>
+        </ul>
+        <div class="visual-area">
+            <div class="emoji-big">🧮</div>
+            <div class="bus">➕➖</div>
+            <div class="emoji-big">🧑‍🍳</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 8 -->
+    <div class="slide">
+        <h2>3. Registers (Meja Racik Sementara)</h2>
+        <ul>
+            <li><span class="highlight">Tugas:</span> Menyimpan data <i>sementara</i> yang sedang diolah.</li>
+            <li>Ukurannya <span class="highlight">sangat kecil</span>, tapi kecepatannya <span class="highlight">sangat kilat</span> (Bahan sudah ada di depan mata).</li>
+        </ul>
+        <div class="visual-area">
+            <div class="emoji-big">🍱</div>
+            <div class="bus">⚡</div>
+            <div class="emoji-big">⏱️</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 9 -->
+    <div class="slide">
+        <h2>Diagram Blok Internal CPU</h2>
+        <div class="diagram-container">
+            <div class="cpu-box">
+                <div class="cpu-title">CHIP CPU</div>
+                <div class="component cu">Control Unit (CU)</div>
+                <div class="component alu">ALU</div>
+                <div class="component reg">Registers</div>
+            </div>
+            <div class="bus">↔ BUS ↔</div>
+            <div class="ram-box">MEMORI<br>(RAM)</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 10 -->
+    <div class="slide">
+        <h2>Kenalan dengan Register Khusus</h2>
+        <div class="diagram-container" style="background:transparent; border:none;">
+            <div class="sim-box" style="border-color:#4DB8FF;">
+                <h3 style="color:#4DB8FF; margin:0;">PC (Program Counter)</h3>
+                <p>Menunjuk nomor antrean instruksi <span class="highlight">Selanjutnya</span>.</p>
+                <div class="emoji-big" style="font-size:4rem;">🎟️</div>
+            </div>
+            <div class="sim-box" style="border-color:#FF9F1C;">
+                <h3 style="color:#FF9F1C; margin:0;">IR (Instruction Register)</h3>
+                <p>Memegang kertas instruksi yang <span class="highlight">Sedang Dikerjakan</span>.</p>
+                <div class="emoji-big" style="font-size:4rem;">📝</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 11 -->
+    <div class="slide">
+        <h2>Siklus Hidup Komputer</h2>
+        <ul>
+            <li>Sejak dinyalakan sampai dimatikan...</li>
+            <li>CPU hanya melakukan <span class="highlight">satu siklus membosankan</span> secara berulang-ulang miliaran kali per detik!</li>
+        </ul>
+        <div class="visual-area">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <!-- SLIDE 12 -->
+    <div class="slide">
+        <h2>The Instruction Cycle (Siklus F-D-E)</h2>
+        <div class="diagram-container" style="background:transparent; border:none;">
+            <div class="cpu-box" style="width:200px; background:#FF9F1C;"><h2 style="color:#000; margin:0;">1. FETCH</h2>Ambil Instruksi</div>
+            <div class="bus">➔</div>
+            <div class="cpu-box" style="width:200px; background:#4DB8FF;"><h2 style="color:#000; margin:0;">2. DECODE</h2>Terjemahkan</div>
+            <div class="bus">➔</div>
+            <div class="cpu-box" style="width:200px; background:#E71D36;"><h2 style="color:#fff; margin:0;">3. EXECUTE</h2>Jalankan</div>
+        </div>
+        <h3 style="margin-top:20px; color:#A0A0A0;">(Setelah Execute, kembali lagi ke Fetch!)</h3>
+    </div>
+
+    <!-- SLIDE 13 -->
+    <div class="slide">
+        <h2>Tahap 1: FETCH (Ambil)</h2>
+        <ul>
+            <li>CPU membaca nomor antrean di <span class="highlight">PC</span>.</li>
+            <li>CPU mengambil instruksi dari RAM ➔ dimasukkan ke <span class="highlight">IR</span>.</li>
+            <li>PC otomatis <span class="highlight">bertambah (+1)</span>.</li>
+        </ul>
+        <div class="diagram-container">
+            <div class="sim-box">PC: 100 ➔ <span class="highlight">101</span></div>
+            <div class="bus">⬅️ (Tarik Data)</div>
+            <div class="sim-box">RAM Alamat 100</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 14 -->
+    <div class="slide">
+        <h2>Tahap 2: DECODE (Terjemahkan)</h2>
+        <ul>
+            <li><span class="highlight">Control Unit</span> membaca isi IR.</li>
+            <li>Misal: Biner <span class="highlight">1000</span> = Perintah ADD (Jumlahkan).</li>
+            <li>CU menyiapkan jalur data menuju ALU.</li>
+        </ul>
+        <div class="visual-area">
+            <div class="emoji-big">🧑‍💼</div>
+            <div class="bus">🤔 "1000 itu apa ya?" ➔ 💡 "Oh, Tambah!"</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 15 -->
+    <div class="slide">
+        <h2>Tahap 3: EXECUTE (Jalankan)</h2>
+        <ul>
+            <li>Instruksi benar-benar dijalankan oleh <span class="highlight">ALU</span>.</li>
+            <li>Perhitungan matematika diselesaikan, hasilnya disimpan.</li>
+            <li>Setelah selesai ➔ CPU kembali ke tahap FETCH.</li>
+        </ul>
+        <div class="visual-area">
+            <div class="emoji-big">⚙️</div>
+            <div class="bus">2 + 3 = 5</div>
+            <div class="emoji-big">✅</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 16 -->
+    <div class="slide">
+        <h2>Metronom CPU (Clock Speed)</h2>
+        <ul>
+            <li>Kecepatan siklus diatur oleh detak <i>Clock</i> (Hertz).</li>
+            <li><span class="highlight">1 GHz = 1 Miliar siklus per detik.</span></li>
+        </ul>
+        <div class="visual-area">
+            <div class="pulse">💓</div>
+            <h1 style="margin-left:20px;">3.5 GHz</h1>
+        </div>
+    </div>
+
+    <!-- SLIDE 17 -->
+    <div class="slide">
+        <h2>Mari Simulasikan!</h2>
+        <ul>
+            <li>Bagaimana CPU menghitung <span class="highlight">2 + 3</span>?</li>
+            <li>Ternyata CPU tidak bisa langsung menghitungnya sekaligus, butuh 3 tahap.</li>
+        </ul>
+        <div class="visual-area">
+            <div class="cpu-box" style="font-size:3rem; background:#000;">2 + 3 = ?</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 18 -->
+    <div class="slide">
+        <h2>3 Langkah Program Kita</h2>
+        <div class="cpu-box" style="width:600px; text-align:left; font-size:1.5rem; font-family:monospace;">
+            <span class="highlight">1. LOAD [10]</span> ➔ Ambil angka 2<br><br>
+            <span class="highlight">2. ADD [11]</span> ➔ Tambahkan dengan 3<br><br>
+            <span class="highlight">3. STORE [12]</span> ➔ Simpan hasil akhirnya
+        </div>
+    </div>
+
+    <!-- SLIDE 19 -->
+    <div class="slide">
+        <h2>Siklus 1: LOAD (Fetch & Decode)</h2>
+        <ul>
+            <li>CPU mengambil perintah LOAD dari RAM.</li>
+            <li>CU menterjemahkan: <span class="highlight">"Ambil angka di laci RAM no 10!"</span></li>
+        </ul>
+        <div class="diagram-container">
+            <div class="cpu-box">IR: <span class="highlight">LOAD [10]</span></div>
+            <div class="bus">⬅️ (Membaca)</div>
+            <div class="ram-box">RAM</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 20 -->
+    <div class="slide">
+        <h2>Siklus 1: LOAD (Execute)</h2>
+        <ul>
+            <li>Angka '2' ditarik dari RAM.</li>
+            <li>Diletakkan di <span class="highlight">Register CPU</span>.</li>
+        </ul>
+        <div class="sim-container">
+            <div class="sim-box">Register CPU<br><div class="sim-data">2</div></div>
+            <div class="bus" style="animation: heartbeat 1s infinite;">⬅️</div>
+            <div class="sim-box">RAM Laci 10<br><div class="sim-data" style="background:#555; color:#fff;">2</div></div>
+        </div>
+    </div>
+
+    <!-- SLIDE 21 -->
+    <div class="slide">
+        <h2>Siklus 2: ADD (Fetch & Decode)</h2>
+        <ul>
+            <li>CPU mengambil perintah ADD dari RAM.</li>
+            <li>CU menterjemahkan: <span class="highlight">"Jumlahkan angka di Register dengan angka di laci RAM no 11!"</span></li>
+        </ul>
+        <div class="diagram-container">
+            <div class="cpu-box">IR: <span class="highlight">ADD [11]</span></div>
+        </div>
+    </div>
+
+    <!-- SLIDE 22 -->
+    <div class="slide">
+        <h2>Siklus 2: ADD (Execute)</h2>
+        <ul>
+            <li><span class="highlight">ALU beraksi!</span></li>
+            <li>Angka 2 (Register) + Angka 3 (RAM) = 5.</li>
+            <li>Hasil 5 <span class="highlight">menimpa</span> angka lama di Register.</li>
+        </ul>
+        <div class="sim-container">
+            <div class="sim-box" style="border-color:#E71D36;">ALU CPU<br><div class="sim-data" style="background:#E71D36; color:#fff;">2 + 3 = 5</div></div>
+            <div class="bus">➔ Register update:</div>
+            <div class="sim-box">Register CPU<br><div class="sim-data">5</div></div>
+        </div>
+    </div>
+
+    <!-- SLIDE 23 -->
+    <div class="slide">
+        <h2>Siklus 3: STORE (Fetch & Decode)</h2>
+        <ul>
+            <li>CPU mengambil perintah STORE.</li>
+            <li>CU menterjemahkan: <span class="highlight">"Simpan isi Register (angka 5) kembali ke RAM!"</span></li>
+        </ul>
+    </div>
+
+    <!-- SLIDE 24 -->
+    <div class="slide">
+        <h2>Siklus 3: STORE (Execute)</h2>
+        <ul>
+            <li>Angka 5 keluar dari CPU menuju laci RAM alamat 12.</li>
+            <li><span class="highlight">PROSES SELESAI!</span></li>
+        </ul>
+        <div class="sim-container">
+            <div class="sim-box">Register CPU<br><div class="sim-data" style="background:#555; color:#fff;">5</div></div>
+            <div class="bus" style="animation: heartbeat 1s infinite;">➡️</div>
+            <div class="sim-box">RAM Laci 12<br><div class="sim-data">5</div></div>
+        </div>
+    </div>
+
+    <!-- SLIDE 25 -->
+    <div class="slide">
+        <h2>Kesimpulan Simulasi</h2>
+        <ul>
+            <li>Hanya untuk menghitung 2+3, data harus bolak-balik antara CPU dan RAM sebanyak 3 kali.</li>
+            <li>Bayangkan mondar-mandirnya CPU saat kalian <span class="highlight">main game 3D!</span></li>
+        </ul>
+        <div class="visual-area">
+            <div class="emoji-big">🥵</div>
+            <div class="bus">🎮</div>
+            <div class="emoji-big">🏎️</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 26 -->
+    <div class="slide">
+        <h2>Piramida Kecepatan</h2>
+        <div class="diagram-container" style="flex-direction:column; gap:10px; background:transparent; border:none;">
+            <div class="sim-box" style="width:200px; background:#E71D36; color:#fff;">CPU / Register (Tercepat)</div>
+            <div class="sim-box" style="width:300px; background:#FF9F1C; color:#000;">RAM (Cepat)</div>
+            <div class="sim-box" style="width:400px; background:#2EC4B6; color:#000;">Storage / HDD / SSD (Lambat)</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 27 -->
+    <div class="slide">
+        <h2>Studi Kasus: Mitos Clock Speed</h2>
+        <ul>
+            <li><span class="highlight">Prosesor A:</span> Model Lama (4.0 GHz)</li>
+            <li><span class="highlight">Prosesor B:</span> Model Baru (3.0 GHz)</li>
+            <li>Diskusikan: Kenapa Prosesor B lebih cepat padahal angkanya lebih kecil?</li>
+        </ul>
+        <div class="visual-area">
+            <div class="emoji-big">🐢 4.0</div>
+            <div class="bus">VS</div>
+            <div class="emoji-big">🚀 3.0</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 28 -->
+    <div class="slide">
+        <h2>Jawaban: IPC (Instructions Per Clock)</h2>
+        <ul>
+            <li>GHz itu cuma kecepatan lari koki.</li>
+            <li>Prosesor modern punya <span class="highlight">ALU lebih banyak</span> dan Register lebih besar. Sekali lari (1 clock), dia bisa mengerjakan banyak instruksi sekaligus.</li>
+        </ul>
+    </div>
+
+    <!-- SLIDE 29 -->
+    <div class="slide">
+        <h2>Rangkuman Pertemuan 3</h2>
+        <ul style="font-size: 1.4rem;">
+            <li>✅ <span class="highlight">CU</span> (Manajer), <span class="highlight">ALU</span> (Koki), <span class="highlight">Register</span> (Meja).</li>
+            <li>✅ <span class="highlight">PC</span> menunjuk nomor selanjutnya, <span class="highlight">IR</span> memegang pesanan saat ini.</li>
+            <li>✅ Siklus Utama: <span class="highlight">Fetch ➔ Decode ➔ Execute</span>.</li>
+            <li>✅ Komputer menghitung secara bertahap (LOAD, ADD, STORE).</li>
+            <li>✅ Clock (GHz) adalah metronom, IPC adalah efisiensi kerja.</li>
+        </ul>
+    </div>
+
+    <!-- SLIDE 30 -->
+    <div class="slide">
+        <h1>Terima Kasih!</h1>
+        <ul>
+            <li style="text-align:center; list-style:none;">Tugas: Cek Task Manager CPU laptopmu.</li>
+            <li style="text-align:center; list-style:none;"><span class="highlight">Minggu Depan:</span> Memory System & Cache.</li>
+        </ul>
+    </div>
+
+</div>
+
+<div class="slide-counter" id="counter">Slide 1 / 30</div>
+
+<div class="controls">
+    <button onclick="prevSlide()">❮ Prev</button>
+    <button onclick="nextSlide()">Next ❯</button>
+</div>
+
+<script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const counter = document.getElementById('counter');
+
+    function showSlide(index) {
+        slides.forEach((slide, i) => {
+            slide.classList.remove('active');
+            if(i === index) { slide.classList.add('active'); }
+        });
+        counter.innerText = `Slide ${index + 1} / ${slides.length}`;
+    }
+
+    function nextSlide() { if (currentSlide < slides.length - 1) { currentSlide++; showSlide(currentSlide); } }
+    function prevSlide() { if (currentSlide > 0) { currentSlide--; showSlide(currentSlide); } }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'Space') { nextSlide(); } 
+        else if (e.key === 'ArrowLeft') { prevSlide(); }
+    });
+
+    showSlide(currentSlide);
+</script>
+
+</body>
+</html>
